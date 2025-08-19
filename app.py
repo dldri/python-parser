@@ -79,8 +79,8 @@ def process_pdf_files(uploaded_files, regex_pattern: str) -> str:
             st.warning(f"Skipping {uploaded_file.name}: Not a PDF file")
             continue
 
-        # Validate file size (500MB limit)
-        if uploaded_file.size > 500 * 1024 * 1024:
+        # Validate file size (200MB limit)
+        if uploaded_file.size > 200 * 1024 * 1024:
             st.warning(f"Skipping {uploaded_file.name}: File too large (>500MB)")
             continue
 
@@ -150,7 +150,7 @@ def main():
             st.caption("Matches: email@domain.com")
 
         # File size limit info
-        st.info("📋 File Limits:\n- Max size: 500MB per file\n- Format: PDF only")
+        st.info("📋 File Limits:\n- Max size: 200MB per file\n- Format: PDF only")
 
     # Main content area
     st.header("Upload PDF Files")
