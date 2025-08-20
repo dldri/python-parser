@@ -1,100 +1,19 @@
 import streamlit as st
-import pymupdf
-import io
-import tempfile
-import os
-from typing import List, Tuple, Dict
-from utils import extract_text_from_pdf, apply_regex_pattern
-
-
-def process_pdf_files(uploaded_files, regex_pattern: str) -> str:
-    """
-    Process multiple PDF files and extract matches based on regex pattern.
-
-    Args:
-        uploaded_files: List of uploaded PDF files
-        regex_pattern: Regex pattern to apply
-
-    Returns:
-        str: Formatted results
-    """
-    results = []
-
-    # Create progress bar for bulk processing
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    for i, uploaded_file in enumerate(uploaded_files):
-        # Update progress
-        progress = (i + 1) / len(uploaded_files)
-        progress_bar.progress(progress)
-        status_text.text(
-            f"Processing {uploaded_file.name}... ({i + 1}/{len(uploaded_files)})"
-        )
-
-        # Validate file type
-        if not uploaded_file.name.lower().endswith(".pdf"):
-            st.warning(f"Skipping {uploaded_file.name}: Not a PDF file")
-            continue
-
-        # Validate file size (200MB limit)
-        if uploaded_file.size > 200 * 1024 * 1024:
-            st.warning(f"Skipping {uploaded_file.name}: File too large (>200MB)")
-            continue
-
-        try:
-            # Extract text from PDF (returns dict with page numbers)
-            page_texts = extract_text_from_pdf(uploaded_file)
-
-            if not page_texts:
-                st.warning(f"No text content found in {uploaded_file.name}")
-                continue
-
-            # Process each page separately
-            document_name = os.path.splitext(uploaded_file.name)[0]
-
-            for page_num, page_text in page_texts.items():
-                # Apply regex pattern to this page
-                matches = apply_regex_pattern(page_text, regex_pattern)
-
-                # Format results: document_name, page_number, matched_pattern
-                for match in matches:
-                    # Handle tuple matches (when regex has groups)
-                    if isinstance(match, tuple):
-                        match_str = " ".join(str(m) for m in match if m)
-                    else:
-                        match_str = str(match)
-
-                    results.append(f"{document_name}\t{page_num}\t{match_str}")
-
-        except Exception as e:
-            st.error(f"Error processing {uploaded_file.name}: {str(e)}")
-            continue
-
-    # Clear progress indicators
-    progress_bar.empty()
-    status_text.empty()
-
-    if results:
-        # Add header row for Excel compatibility
-        header = "Document\tPage\tMatch"
-        return header + "\n" + "\n".join(results)
-    else:
-        return ""
+from utils import process_pdf_files
 
 
 def main():
     """Main Streamlit application"""
 
-    st.title("📄 PDF Text Extraction Tool")
-    st.markdown("Upload PDF files and extract text patterns using regex")
+    _ = st.title("📄 PDF Text Extraction Tool")
+    _ = st.markdown("Upload PDF files and extract text patterns using regex")
 
     # Sidebar for configuration
     with st.sidebar:
-        st.header("Configuration")
+        _ = st.header("Configuration")
 
         # Regex pattern input
-        st.subheader("Regex Pattern")
+        _ = st.subheader("Regex Pattern")
         regex_pattern = st.text_input(
             "Enter regex pattern:",
             value=r"\b\d{4}-\d{4}-\d{4}\b",
@@ -103,28 +22,28 @@ def main():
 
         # Pattern examples
         with st.expander("Common Pattern Examples"):
-            st.code("\\b\\d{4}-\\d{4}-\\d{4}\\b", language="regex")
-            st.caption("Matches: 1234-5678-9012")
+            _ = st.code("\\b\\d{4}-\\d{4}-\\d{4}\\b", language="regex")
+            _ = st.caption("Matches: 1234-5678-9012")
 
-            st.code("\\b[A-Z]{2}\\d{6}\\b", language="regex")
-            st.caption("Matches: AB123456")
+            _ = st.code("\\b[A-Z]{2}\\d{6}\\b", language="regex")
+            _ = st.caption("Matches: AB123456")
 
-            st.code("\\$\\d+\\.\\d{2}", language="regex")
-            st.caption("Matches: $123.45")
+            _ = st.code("\\$\\d+\\.\\d{2}", language="regex")
+            _ = st.caption("Matches: $123.45")
 
-            st.code("\\b\\w+@\\w+\\.\\w+\\b", language="regex")
-            st.caption("Matches: email@domain.com")
+            _ = st.code("\\b\\w+@\\w+\\.\\w+\\b", language="regex")
+            _ = st.caption("Matches: email@domain.com")
 
         # File size limit info
-        st.info("📋 File Limits:\n- Max size: 200MB per file\n- Format: PDF only")
+        _ = st.info("📋 File Limits:\n- Max size: 200MB per file\n- Format: PDF only")
 
         # Excel compatibility info
-        st.success(
+        _ = st.success(
             "📊 Excel Ready:\nResults use tabs - copy & paste directly into Excel!"
         )
 
     # Main content area
-    st.header("Upload PDF Files")
+    _ = st.header("Upload PDF Files")
 
     # File uploader
     uploaded_files = st.file_uploader(
@@ -135,7 +54,7 @@ def main():
     )
 
     if uploaded_files and regex_pattern:
-        st.success(f"Uploaded {len(uploaded_files)} file(s)")
+        _ = st.success(f"Uploaded {len(uploaded_files)} file(s)")
 
         # Display uploaded files
         with st.expander("Uploaded Files"):
@@ -146,18 +65,18 @@ def main():
         # Process button
         if st.button("🔍 Extract Text Patterns", type="primary"):
             if not regex_pattern.strip():
-                st.error("Please enter a regex pattern")
+                _ = st.error("Please enter a regex pattern")
                 return
 
             with st.spinner("Processing PDF files..."):
                 results = process_pdf_files(uploaded_files, regex_pattern)
 
             if results:
-                st.success("✅ Processing completed!")
+                _ = st.success("✅ Processing completed!")
 
                 # Display results
-                st.subheader("Results")
-                st.text_area(
+                _ = st.subheader("Results")
+                _ = st.text_area(
                     "Extracted patterns:",
                     value=results,
                     height=300,
@@ -165,7 +84,7 @@ def main():
                 )
 
                 # Download button
-                st.download_button(
+                _ = st.download_button(
                     label="💾 Download Results (TSV)",
                     data=results,
                     file_name="pdf_extraction_results.tsv",
@@ -174,23 +93,23 @@ def main():
 
                 # Statistics
                 num_matches = len(results.split("\n")) if results else 0
-                st.metric("Total Matches Found", num_matches)
+                _ = st.metric("Total Matches Found", num_matches)
 
             else:
-                st.warning("No matches found in the uploaded files")
-                st.info(
+                _ = st.warning("No matches found in the uploaded files")
+                _ = st.info(
                     "Try adjusting your regex pattern or check if the PDFs contain the expected text"
                 )
 
     elif uploaded_files and not regex_pattern:
-        st.warning("Please enter a regex pattern to process the files")
+        _ = st.warning("Please enter a regex pattern to process the files")
 
     elif not uploaded_files:
-        st.info("👆 Upload PDF files to get started")
+        _ = st.info("👆 Upload PDF files to get started")
 
         # Sample usage instructions
         with st.expander("How to Use"):
-            st.markdown(
+            _ = st.markdown(
                 """
             1. **Upload PDFs**: Select one or more PDF files using the file uploader
             2. **Set Pattern**: Enter a regex pattern to match specific text patterns
