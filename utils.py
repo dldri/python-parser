@@ -1,4 +1,5 @@
 from io import BytesIO
+import re
 import pymupdf
 import streamlit as st
 
@@ -33,3 +34,22 @@ def extract_text_from_pdf(pdf_file: BytesIO) -> dict[int, str]:
     except Exception as e:
         _ = st.error(f"Error extracting text from PDF: {str(e)}")
         return {}
+
+
+def apply_regex_pattern(text: str, pattern: str) -> list[str]:
+    """
+    Apply regex pattern to text and return all matches.
+
+    Args:
+        text: Text content to search
+        pattern: Regex pattern to apply
+
+    Returns:
+        List of matched strings
+    """
+    try:
+        matches = re.findall(pattern, text, re.MULTILINE | re.IGNORECASE)
+        return matches
+    except re.error as e:
+        _ = st.error(f"Invalid regex pattern: {str(e)}")
+        return []

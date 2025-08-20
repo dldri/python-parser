@@ -1,31 +1,10 @@
 import streamlit as st
 import pymupdf
-import re
 import io
 import tempfile
 import os
 from typing import List, Tuple, Dict
-from utils import extract_text_from_pdf
-
-
-
-def apply_regex_pattern(text: str, pattern: str) -> List[str]:
-    """
-    Apply regex pattern to text and return all matches.
-
-    Args:
-        text: Text content to search
-        pattern: Regex pattern to apply
-
-    Returns:
-        List of matched strings
-    """
-    try:
-        matches = re.findall(pattern, text, re.MULTILINE | re.IGNORECASE)
-        return matches
-    except re.error as e:
-        st.error(f"Invalid regex pattern: {str(e)}")
-        return []
+from utils import extract_text_from_pdf, apply_regex_pattern
 
 
 def process_pdf_files(uploaded_files, regex_pattern: str) -> str:
