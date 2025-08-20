@@ -1,5 +1,5 @@
 import streamlit as st
-import pdfplumber
+import pymupdf
 import re
 import io
 import tempfile
@@ -7,27 +7,36 @@ import os
 from typing import List, Tuple, Dict
 
 
-def extract_text_from_pdf(pdf_file) -> str:
+def extract_text_from_pdf(pdf_file) -> Dict[int, str]:
     """
-    Extract text content from a PDF file using pdfplumber.
+    Extract text content from a PDF file using PyMuPDF.
 
     Args:
         pdf_file: Uploaded PDF file object
 
     Returns:
-        str: Extracted text content
+        Dict[int, str]: Dictionary with page numbers as keys and text content as values
     """
     try:
-        with pdfplumber.open(pdf_file) as pdf:
-            text = ""
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
-        return text
+        # Read the file content into bytes
+        pdf_bytes = pdf_file.read()
+
+        # Open PDF from bytes
+        pdf_document = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+        page_texts = {}
+
+        # Extract text from each page
+        for page_num in range(pdf_document.page_count):
+            page = pdf_document[page_num]
+            page_text = page.get_text()
+            if page_text:
+                page_texts[page_num + 1] = page_text  # 1-based page numbering
+
+        pdf_document.close()
+        return page_texts
     except Exception as e:
         st.error(f"Error extracting text from PDF: {str(e)}")
-        return ""
+        return {}
 
 
 def apply_regex_pattern(text: str, pattern: str) -> List[str]:
@@ -81,30 +90,33 @@ def process_pdf_files(uploaded_files, regex_pattern: str) -> str:
 
         # Validate file size (200MB limit)
         if uploaded_file.size > 200 * 1024 * 1024:
-            st.warning(f"Skipping {uploaded_file.name}: File too large (>500MB)")
+            st.warning(f"Skipping {uploaded_file.name}: File too large (>200MB)")
             continue
 
         try:
-            # Extract text from PDF
-            text_content = extract_text_from_pdf(uploaded_file)
+            # Extract text from PDF (returns dict with page numbers)
+            page_texts = extract_text_from_pdf(uploaded_file)
 
-            if not text_content.strip():
+            if not page_texts:
                 st.warning(f"No text content found in {uploaded_file.name}")
                 continue
 
-            # Apply regex pattern
-            matches = apply_regex_pattern(text_content, regex_pattern)
-
-            # Format results: document_name, matched_pattern
+            # Process each page separately
             document_name = os.path.splitext(uploaded_file.name)[0]
-            for match in matches:
-                # Handle tuple matches (when regex has groups)
-                if isinstance(match, tuple):
-                    match_str = " ".join(str(m) for m in match if m)
-                else:
-                    match_str = str(match)
 
-                results.append(f"{document_name},{match_str}")
+            for page_num, page_text in page_texts.items():
+                # Apply regex pattern to this page
+                matches = apply_regex_pattern(page_text, regex_pattern)
+
+                # Format results: document_name, page_number, matched_pattern
+                for match in matches:
+                    # Handle tuple matches (when regex has groups)
+                    if isinstance(match, tuple):
+                        match_str = " ".join(str(m) for m in match if m)
+                    else:
+                        match_str = str(match)
+
+                    results.append(f"{document_name}\t{page_num}\t{match_str}")
 
         except Exception as e:
             st.error(f"Error processing {uploaded_file.name}: {str(e)}")
@@ -114,7 +126,12 @@ def process_pdf_files(uploaded_files, regex_pattern: str) -> str:
     progress_bar.empty()
     status_text.empty()
 
-    return "\n".join(results)
+    if results:
+        # Add header row for Excel compatibility
+        header = "Document\tPage\tMatch"
+        return header + "\n" + "\n".join(results)
+    else:
+        return ""
 
 
 def main():
@@ -151,6 +168,11 @@ def main():
 
         # File size limit info
         st.info("📋 File Limits:\n- Max size: 200MB per file\n- Format: PDF only")
+
+        # Excel compatibility info
+        st.success(
+            "📊 Excel Ready:\nResults use tabs - copy & paste directly into Excel!"
+        )
 
     # Main content area
     st.header("Upload PDF Files")
@@ -190,15 +212,15 @@ def main():
                     "Extracted patterns:",
                     value=results,
                     height=300,
-                    help="Format: document_name, matched_pattern",
+                    help="Format: document_name [TAB] page_number [TAB] matched_pattern (Excel-ready)",
                 )
 
                 # Download button
                 st.download_button(
-                    label="💾 Download Results",
+                    label="💾 Download Results (TSV)",
                     data=results,
-                    file_name="pdf_extraction_results.txt",
-                    mime="text/plain",
+                    file_name="pdf_extraction_results.tsv",
+                    mime="text/tab-separated-values",
                 )
 
                 # Statistics
@@ -226,13 +248,15 @@ def main():
             3. **Process**: Click the 'Extract Text Patterns' button
             4. **Review**: Check the results and download as needed
             
-            **Output Format**: Each line contains:
-            `document_name,matched_pattern`
+            **Output Format**: Each line contains tab-separated values:
+            `document_name [TAB] page_number [TAB] matched_pattern`
+            
+            **Excel Copy-Paste**: You can copy the results and paste directly into Excel - each tab will create a new column.
             
             **Tips**:
             - Use the sidebar examples for common patterns
             - Test your regex pattern with a single file first
-            - Files larger than 10MB will be skipped
+            - Files larger than 200MB will be skipped
             """
             )
 
