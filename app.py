@@ -78,7 +78,7 @@ def main():
                 return
 
             with st.spinner("Processing PDF files..."):
-                results = process_pdf_files(uploaded_files, regex_pattern)
+                results, highlighted_zip = process_pdf_files(uploaded_files, regex_pattern, create_highlights)
 
             if results:
                 _ = st.success("✅ Processing completed!")
