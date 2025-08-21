@@ -86,6 +86,7 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str, cr
         _ = status_text.text(
             f"Processing {file_name}... ({i + 1}/{len(uploaded_files)})"
         )
+        tag_count = 1
 
         # Validate file type
         if not uploaded_file.name.lower().endswith(".pdf"):
@@ -130,7 +131,9 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str, cr
                     else:
                         match_str = str(match)
 
-                    results.append(f"{document_name}\t{page_num}\t{match_str}")
+                    results.append(
+                        f"{tag_count}\t{document_name}\t{page_num}\t{match_str}")
+                    tag_count += 1
 
             # Create highlighted PDF if requested and matches were found
             if create_highlighted_pdfs and has_matches:
@@ -157,7 +160,7 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str, cr
 
     if results:
         # Add header row for Excel compatibility
-        header = "Document\tPage\tMatch"
+        header = "Index\tDocument\tPage\tMatch"
         return header + "\n" + "\n".join(results), zip_bytes
     else:
         return "", zip_bytes
