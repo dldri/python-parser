@@ -179,6 +179,7 @@ def highlight_matches_in_pdf(pdf_bytes: bytes, regex_pattern: str, filename: str
     try:
         # Open the original PDF
         pdf_document = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+        tag_count = 1
 
         # Process each page
         for page_num in range(pdf_document.page_count):
@@ -202,6 +203,11 @@ def highlight_matches_in_pdf(pdf_bytes: bytes, regex_pattern: str, filename: str
                     # Yellow highlight
                     highlight.set_colors({"stroke": [1, 1, 0]})
                     highlight.update()
+                    # Update annotation to have identify the tag index
+                    annot_info = highlight.info
+                    annot_info["subject"] = str(tag_count)
+                    highlight.set_info(annot_info)
+                    tag_count += 1
 
         # Get the modified PDF as bytes
         modified_pdf_bytes = pdf_document.write()
