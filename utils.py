@@ -216,5 +216,5 @@ def highlight_matches_in_pdf(pdf_bytes: bytes, regex_pattern: str, filename: str
         return modified_pdf_bytes
 
     except Exception as e:
-        st.error(f"Error highlighting matches in {filename}: {str(e)}")
+        _ = st.error(f"Error highlighting matches in {filename}: {str(e)}")
         return pdf_bytes  # Return original if highlighting fails
