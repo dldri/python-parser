@@ -86,6 +86,7 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str, cr
         _ = status_text.text(
             f"Processing {file_name}... ({i + 1}/{len(uploaded_files)})"
         )
+        tag_count = 1
 
         # Validate file type
         if not uploaded_file.name.lower().endswith(".pdf"):
@@ -130,7 +131,9 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str, cr
                     else:
                         match_str = str(match)
 
-                    results.append(f"{document_name}\t{page_num}\t{match_str}")
+                    results.append(
+                        f"{tag_count}\t{document_name}\t{page_num}\t{match_str}")
+                    tag_count += 1
 
             # Create highlighted PDF if requested and matches were found
             if create_highlighted_pdfs and has_matches:
@@ -157,7 +160,7 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str, cr
 
     if results:
         # Add header row for Excel compatibility
-        header = "Document\tPage\tMatch"
+        header = "Index\tDocument\tPage\tMatch"
         return header + "\n" + "\n".join(results), zip_bytes
     else:
         return "", zip_bytes
@@ -179,6 +182,7 @@ def highlight_matches_in_pdf(pdf_bytes: bytes, regex_pattern: str, filename: str
     try:
         # Open the original PDF
         pdf_document = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+        tag_count = 1
 
         # Process each page
         for page_num in range(pdf_document.page_count):
@@ -202,6 +206,11 @@ def highlight_matches_in_pdf(pdf_bytes: bytes, regex_pattern: str, filename: str
                     # Yellow highlight
                     highlight.set_colors({"stroke": [1, 1, 0]})
                     highlight.update()
+                    # Update annotation to have identify the tag index
+                    annot_info = highlight.info
+                    annot_info["subject"] = str(tag_count)
+                    highlight.set_info(annot_info)
+                    tag_count += 1
 
         # Get the modified PDF as bytes
         modified_pdf_bytes = pdf_document.write()
@@ -210,5 +219,5 @@ def highlight_matches_in_pdf(pdf_bytes: bytes, regex_pattern: str, filename: str
         return modified_pdf_bytes
 
     except Exception as e:
-        st.error(f"Error highlighting matches in {filename}: {str(e)}")
+        _ = st.error(f"Error highlighting matches in {filename}: {str(e)}")
         return pdf_bytes  # Return original if highlighting fails
