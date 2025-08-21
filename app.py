@@ -145,6 +145,8 @@ def main():
             `document_name [TAB] page_number [TAB] matched_pattern`
             
             **Excel Copy-Paste**: You can copy the results and paste directly into Excel - each tab will create a new column.
+
+            **Highlighting Feature**: Enable 'Highlight matches' to create downloadable PDFs with fellow highlighting on all matched patterns.
             
             **Tips**:
             - Use the sidebar examples for common patterns
