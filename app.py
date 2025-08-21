@@ -93,12 +93,28 @@ def main():
                 )
 
                 # Download button
-                _ = st.download_button(
-                    label="💾 Download Results (TSV)",
-                    data=results,
-                    file_name="pdf_extraction_results.tsv",
-                    mime="text/tab-separated-values",
-                )
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    _ = st.download_button(
+                        label="💾 Download Results (TSV)",
+                        data=results,
+                        file_name="pdf_extraction_results.tsv",
+                        mime="text/tab-separated-values",
+                    )
+
+                with col2:
+                    if highlighted_zip:
+                        _ = st.download_button(
+                            label="🔰 Download Highlighted PDFs",
+                            data=highlighted_zip,
+                            file_name="highlighted_pdfs.zip",
+                            mime="application/zip",
+                            help="ZIP file containing PDFs with highlighted matches"
+                        )
+                    else:
+                        st.info("No highlighted PDFs (no matches or highlighting disabled)")
+
 
                 # Statistics
                 num_matches = len(results.split("\n")) if results else 0
