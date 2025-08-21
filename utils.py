@@ -1,5 +1,7 @@
 from io import BytesIO
+import io
 import re
+import zipfile
 import pymupdf
 import streamlit as st
 import os
@@ -57,18 +59,20 @@ def apply_regex_pattern(text: str, pattern: str) -> list[str]:
         return []
 
 
-def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str) -> str:
+def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str, create_highlighted_pdfs: bool = False) -> tuple[str, bytes | None]:
     """
     Process multiple PDF files and extract matches based on regex pattern.
 
     Args:
         uploaded_files: List of uploaded PDF files
         regex_pattern: Regex pattern to apply
+        create_highlighted_pdfs: Whether to create highlighted PDFs
 
     Returns:
-        str: Formatted results
+        tuple[str, bytes | None]: Formatted results and zip file with highlighted PDFs
     """
     results: list[str] = []
+    highlighted_pdfs = {}
 
     # Create progress bar for bulk processing
     progress_bar = st.progress(0)
@@ -95,7 +99,13 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str) ->
             continue
 
         try:
+            # Read PDF bytes for potential highlighting
+            _ = uploaded_file.seek(0)  # Reset file pointer
+            pdf_bytes = uploaded_file.read()
+
             # Extract text from PDF (returns dict with page numbers)
+            # Reset file pointer for text extraction
+            _ = uploaded_file.seek(0)
             page_texts = extract_text_from_pdf(uploaded_file)
 
             if not page_texts:
@@ -105,6 +115,7 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str) ->
 
             # Process each page separately
             document_name = os.path.splitext(uploaded_file.name)[0]
+            has_matches = False
 
             for page_num, page_text in page_texts.items():
                 # Apply regex pattern to this page
@@ -112,6 +123,7 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str) ->
 
                 # Format results: document_name, page_number, matched_pattern
                 for match in matches:
+                    has_matches = True
                     # Handle tuple matches (when regex has groups)
                     if isinstance(match, tuple):
                         match_str = " ".join(str(m) for m in match if m)
@@ -119,6 +131,12 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str) ->
                         match_str = str(match)
 
                     results.append(f"{document_name}\t{page_num}\t{match_str}")
+
+            # Create highlighted PDF if requested and matches were found
+            if create_highlighted_pdfs and has_matches:
+                highlighted_pdf_bytes = highlight_matches_in_pdf(
+                    pdf_bytes, regex_pattern, uploaded_file.name)
+                highlighted_pdfs[f"{document_name}_highlighted.pdf"] = highlighted_pdf_bytes
 
         except Exception as e:
             _ = st.error(f"Error processing {uploaded_file.name}: {str(e)}")
@@ -128,9 +146,69 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str) ->
     _ = progress_bar.empty()
     _ = status_text.empty()
 
+    # Create zip file with highlighted PDFs if an exist
+    zip_bytes = None
+    if highlighted_pdfs:
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for filename, pdf_content in highlighted_pdfs.items():
+                zip_file.writestr(filename, pdf_content)
+        zip_bytes = zip_buffer.getvalue()
+
     if results:
         # Add header row for Excel compatibility
         header = "Document\tPage\tMatch"
-        return header + "\n" + "\n".join(results)
+        return header + "\n" + "\n".join(results), zip_bytes
     else:
-        return ""
+        return "", zip_bytes
+
+
+def highlight_matches_in_pdf(pdf_bytes: bytes, regex_pattern: str, filename: str) -> bytes:
+    """
+    Create a new PDF with highlighted matches.
+
+    Args:
+        pdf_bytes: Original PDF content as bytes
+        regex_pattern: Regex pattern to search for
+        filename: Name of the file for error reporting
+
+    Returns:
+        bytes: New PDF with highlighted matches
+    """
+
+    try:
+        # Open the original PDF
+        pdf_document = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+
+        # Process each page
+        for page_num in range(pdf_document.page_count):
+            page = pdf_document[page_num]
+
+            # Get text instances that match the pattern
+            page_text = page.get_textpage().extractText()
+            matches = re.finditer(regex_pattern, page_text,
+                                  re.MULTILINE | re.IGNORECASE)
+
+            # For each match, find its location on the page and highlight it
+            for match in matches:
+                match_text = match.group()
+                # Search for text instances on the page
+                text_instances = page.get_textpage().search(match_text)
+
+                # Highlight each instance
+                for inst in text_instances:
+                    # Create a highlight annotation
+                    highlight = page.add_highlight_annot(inst)
+                    # Yellow highlight
+                    highlight.set_colors({"stroke": [1, 1, 0]})
+                    highlight.update()
+
+        # Get the modified PDF as bytes
+        modified_pdf_bytes = pdf_document.write()
+        pdf_document.close()
+
+        return modified_pdf_bytes
+
+    except Exception as e:
+        st.error(f"Error highlighting matches in {filename}: {str(e)}")
+        return pdf_bytes  # Return original if highlighting fails

@@ -16,8 +16,8 @@ def main():
         _ = st.subheader("Regex Pattern")
         regex_pattern = st.text_input(
             "Enter regex pattern:",
-            value=r"\b\d{4}-\d{4}-\d{4}\b",
-            help="Example: \\b\\d{4}-\\d{4}-\\d{4}\\b for patterns like 1234-5678-9012",
+            value=r"^\d{4}-.*",
+            help="Example: ^\\d{4}-.* for patterns like 2100-BDG-0001",
         )
 
         # Pattern examples
@@ -62,14 +62,23 @@ def main():
                 file_size_mb = file.size / (1024 * 1024)
                 st.write(f"📄 {file.name} ({file_size_mb:.2f} MB)")
 
+        # Options for processing
+        col1, col2 = st.columns([3, 1])
+
+        with col1:
+            process_button = st.button("🔍 Extract Text Patterns", type="primary")
+
+        with col2:
+            create_highlights = st.checkbox("🔰 Highlight matches", help="Create highlighted PDFs for download")
+
         # Process button
-        if st.button("🔍 Extract Text Patterns", type="primary"):
+        if process_button:
             if not regex_pattern.strip():
                 _ = st.error("Please enter a regex pattern")
                 return
 
             with st.spinner("Processing PDF files..."):
-                results = process_pdf_files(uploaded_files, regex_pattern)
+                results, highlighted_zip = process_pdf_files(uploaded_files, regex_pattern, create_highlights)
 
             if results:
                 _ = st.success("✅ Processing completed!")
@@ -84,12 +93,28 @@ def main():
                 )
 
                 # Download button
-                _ = st.download_button(
-                    label="💾 Download Results (TSV)",
-                    data=results,
-                    file_name="pdf_extraction_results.tsv",
-                    mime="text/tab-separated-values",
-                )
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    _ = st.download_button(
+                        label="💾 Download Results (TSV)",
+                        data=results,
+                        file_name="pdf_extraction_results.tsv",
+                        mime="text/tab-separated-values",
+                    )
+
+                with col2:
+                    if highlighted_zip:
+                        _ = st.download_button(
+                            label="🔰 Download Highlighted PDFs",
+                            data=highlighted_zip,
+                            file_name="highlighted_pdfs.zip",
+                            mime="application/zip",
+                            help="ZIP file containing PDFs with highlighted matches"
+                        )
+                    else:
+                        st.info("No highlighted PDFs (no matches or highlighting disabled)")
+
 
                 # Statistics
                 num_matches = len(results.split("\n")) if results else 0
@@ -120,6 +145,8 @@ def main():
             `document_name [TAB] page_number [TAB] matched_pattern`
             
             **Excel Copy-Paste**: You can copy the results and paste directly into Excel - each tab will create a new column.
+
+            **Highlighting Feature**: Enable 'Highlight matches' to create downloadable PDFs with fellow highlighting on all matched patterns.
             
             **Tips**:
             - Use the sidebar examples for common patterns
