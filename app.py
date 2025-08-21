@@ -116,9 +116,9 @@ def main():
                         st.info("No highlighted PDFs (no matches or highlighting disabled)")
 
 
-                # Statistics
+                # Statistics - results - 1 to account for header
                 num_matches = len(results.split("\n")) if results else 0
-                _ = st.metric("Total Matches Found", num_matches)
+                _ = st.metric("Total Matches Found", num_matches - 1)
 
             else:
                 _ = st.warning("No matches found in the uploaded files")
