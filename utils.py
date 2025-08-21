@@ -134,3 +134,54 @@ def process_pdf_files(uploaded_files: list[UploadedFile], regex_pattern: str) ->
         return header + "\n" + "\n".join(results)
     else:
         return ""
+
+
+def highlight_matches_in_pdf(pdf_bytes: bytes, regex_pattern: str, filename: str) -> bytes:
+    """
+    Create a new PDF with highlighted matches.
+
+    Args:
+        pdf_bytes: Original PDF content as bytes
+        regex_pattern: Regex pattern to search for
+        filename: Name of the file for error reporting
+
+    Returns:
+        bytes: New PDF with highlighted matches
+    """
+
+    try:
+        # Open the original PDF
+        pdf_document = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+
+        # Process each page
+        for page_num in range(pdf_document.page_count):
+            page = pdf_document[page_num]
+
+            # Get text instances that match the pattern
+            page_text = page.get_textpage().extractText()
+            matches = re.finditer(regex_pattern, page_text,
+                                  re.MULTILINE | re.IGNORECASE)
+
+            # For each match, find its location on the page and highlight it
+            for match in matches:
+                match_text = match.group()
+                # Search for text instances on the page
+                text_instances = page.get_textpage().search(match_text)
+
+                # Highlight each instance
+                for inst in text_instances:
+                    # Create a highlight annotation
+                    highlight = page.add_highlight_annot(inst)
+                    # Yellow highlight
+                    highlight.set_colors({"stroke": [1, 1, 0]})
+                    highlight.update()
+
+        # Get the modified PDF as bytes
+        modified_pdf_bytes = pdf_document.write()
+        pdf_document.close()
+
+        return modified_pdf_bytes
+
+    except Exception as e:
+        st.error(f"Error highlighting matches in {filename}: {str(e)}")
+        return pdf_bytes  # Return original if highlighting fails
