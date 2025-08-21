@@ -16,8 +16,8 @@ def main():
         _ = st.subheader("Regex Pattern")
         regex_pattern = st.text_input(
             "Enter regex pattern:",
-            value=r"\b\d{4}-\d{4}-\d{4}\b",
-            help="Example: \\b\\d{4}-\\d{4}-\\d{4}\\b for patterns like 1234-5678-9012",
+            value=r"^\d{4}-.*",
+            help="Example: ^\\d{4}-.* for patterns like 2100-BDG-0001",
         )
 
         # Pattern examples
