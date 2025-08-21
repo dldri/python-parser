@@ -62,8 +62,17 @@ def main():
                 file_size_mb = file.size / (1024 * 1024)
                 st.write(f"📄 {file.name} ({file_size_mb:.2f} MB)")
 
+        # Options for processing
+        col1, col2 = st.columns([3, 1])
+
+        with col1:
+            process_button = st.button("🔍 Extract Text Patterns", type="primary")
+
+        with col2:
+            create_highlights = st.checkbox("🔰 Highlight matches", help="Create highlighted PDFs for download")
+
         # Process button
-        if st.button("🔍 Extract Text Patterns", type="primary"):
+        if process_button:
             if not regex_pattern.strip():
                 _ = st.error("Please enter a regex pattern")
                 return
